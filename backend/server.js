@@ -10,8 +10,17 @@ dotenv.config();
 
 const app = express();
 
+// ===== CUSTOM CORS CONFIG =====
+app.use(cors({
+  origin: [
+    'https://food-waste-rescue.netlify.app/', // Netlify frontend
+    'http://localhost:5173'                  // Local development
+  ],
+  credentials: true
+}));
+// ==============================
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -29,7 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/orders', orderRoutes);
 
-// ====== ADD THIS ERROR HANDLING MIDDLEWARE ======
+// ====== ERROR HANDLING MIDDLEWARE ======
 
 // Handle 404 errors
 app.use((req, res, next) => {
