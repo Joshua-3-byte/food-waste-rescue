@@ -10,63 +10,35 @@ dotenv.config();
 const app = express();
 
 // ===== CORS Configuration =====
-const allowedOrigins = [
-  'https://food-waste-rescue.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:5000'
-];
-
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests from:
+    const allowedOrigins = [
+      'https://food-waste-rescue.netlify.app/', // Your Netlify URL
+      'http://localhost:5173', // Local development
+      'http://localhost:5000', // Alt local
+    ];
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('Blocked by CORS:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
 
-// Apply CORS middleware
 app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).send();
-});
-
-// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Test route
 app.get('/', (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'Food Waste Rescue API is running!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Test CORS route
-app.get('/api/test-cors', (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'CORS is working!',
-    origin: req.headers.origin
-  });
+  res.json({ message: 'Food Waste Rescue API is running!' });
 });
 
 // Import routes
@@ -80,8 +52,6 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/orders', orderRoutes);
 
 // ===== Error Handling =====
-
-// 404 handler - FIXED: Use proper express 404 handler
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
@@ -89,90 +59,25 @@ app.use((req, res, next) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  
-  // CORS error
-  if (err.message.includes('CORS')) {
-    return res.status(403).json({
-      success: false,
-      message: 'CORS policy blocked the request',
-      origin: req.headers.origin
-    });
-  }
-  
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map(val => val.message);
-    return res.status(400).json({
-      success: false,
-      message: 'Validation Error',
-      errors: messages
-    });
-  }
-  
-  // Mongoose duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({
-      success: false,
-      message: `${field} already exists`
-    });
-  }
-  
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid token'
-    });
-  }
-  
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Token expired'
-    });
-  }
-  
-  // Default error
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: err.message || 'Server Error',
   });
 });
 
 // ===== Database Connection =====
-const connectDB = async () => {
-  try {
-    // Check if MONGODB_URI is defined
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
-    }
-
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
     });
-    
-    console.log('✅ MongoDB connected successfully:', conn.connection.host);
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  }
-};
-
-// Start server
-const PORT = process.env.PORT || 5000;
-
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌐 CORS enabled for:`, allowedOrigins);
-    console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-});
-
-module.exports = app;
