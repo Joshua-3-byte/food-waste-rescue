@@ -14,7 +14,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests from:
     const allowedOrigins = [
-      'https://food-waste-rescue.netlify.app/', // Your Netlify URL
+      'https://food-waste-rescue.netlify.app', // Your Netlify URL
       'http://localhost:5173', // Local development
       'http://localhost:5000', // Alt local
     ];
