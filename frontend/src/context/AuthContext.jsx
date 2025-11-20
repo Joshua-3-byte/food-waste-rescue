@@ -20,10 +20,12 @@ export const AuthProvider = ({ children }) => {
 
   const loadUser = async () => {
     try {
+      console.log('👤 Loading user...');
       const { data } = await API.get('/auth/me');
       setUser(data.user);
+      console.log('✅ User loaded:', data.user.email);
     } catch (error) {
-      console.error('Failed to load user:', error);
+      console.error('❌ Failed to load user:', error);
       localStorage.removeItem('token');
       setToken(null);
     } finally {
@@ -32,22 +34,37 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const { data } = await API.post('/auth/register', userData);
-    localStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data;
+    try {
+      console.log('📝 Registering user...');
+      const { data } = await API.post('/auth/register', userData);
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      console.log('✅ Registration successful');
+      return data;
+    } catch (error) {
+      console.error('❌ Registration failed:', error);
+      throw error;
+    }
   };
 
   const login = async (credentials) => {
-    const { data } = await API.post('/auth/login', credentials);
-    localStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data;
+    try {
+      console.log('🔐 Logging in...');
+      const { data } = await API.post('/auth/login', credentials);
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      console.log('✅ Login successful');
+      return data;
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
+    console.log('👋 Logging out...');
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
